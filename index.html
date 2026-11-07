@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TEXT HiP — 읽는 게 힙해지는 서비스</title>
+  <meta name="description" content="지금 내 상황을 말하면 고전 속 명문장을 찾아 그래피티 카드로 만들어 주는 서비스" />
+  <meta property="og:title" content="TEXT HiP — 읽는 게 힙해지는 서비스" />
+  <meta property="og:description" content="상황을 말하면, 책 속 문장이 그래피티가 된다." />
+  <meta name="theme-color" content="#111111" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Dokdo&family=East+Sea+Dokdo&family=Gaegu:wght@400;700&family=Jua&family=Nanum+Pen+Script&family=Yeon+Sung&family=Noto+Sans+KR:wght@400;500;700&display=swap" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <h1 class="logo" aria-label="TEXT HiP"><span class="logo-text">TEXT</span><span class="logo-hip">HiP</span></h1>
+      <p class="tagline"><mark>읽는 게 힙해지는 서비스</mark></p>
+    </div>
+    <div class="top-actions">
+      <button id="status-pill" class="status-pill" type="button" title="AI 연결 설정"></button>
+      <button id="btn-settings" class="btn btn-ghost" type="button">⚙ 설정</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- STEP 1 -->
+    <section id="step-input" class="panel">
+      <h2 class="step"><span class="num n1">1</span>지금 내 상황</h2>
+      <p class="hint">무슨 일이 있었는지, 어떤 기분인지 편하게 적어주세요. 어울리는 책 속 문장을 찾아드려요.</p>
+      <textarea id="situation" rows="4" maxlength="600"
+        placeholder="예) 열심히 준비한 시험을 망쳤어. 다음 주에 또 시험인데 아무것도 하기 싫다…"></textarea>
+      <div class="counter"><span id="sit-count">0</span>/600</div>
+
+      <div class="field">
+        <label>어떤 책에서 찾을까? <small>(여러 개 선택 가능)</small></label>
+        <div id="scopes" class="chips"></div>
+        <input id="custom-book" type="text" maxlength="80" placeholder="특정 책·작가를 지정하려면 입력 (선택) — 예: 데미안, 윤동주, 논어" />
+      </div>
+
+      <div class="field">
+        <label>받고 싶은 분위기</label>
+        <div id="tones" class="chips"></div>
+      </div>
+
+      <button id="btn-find" class="btn btn-primary btn-big" type="button">문장 찾기 <span>→</span></button>
+    </section>
+
+    <!-- STEP 2 -->
+    <section id="step-pick" class="panel" hidden>
+      <h2 class="step"><span class="num n2">2</span>마음에 꽂히는 문장 고르기</h2>
+      <div id="suggestions" class="suggest-grid"></div>
+      <div class="row-center">
+        <button id="btn-more" class="btn btn-ghost" type="button">↻ 다른 문장 더 찾기</button>
+      </div>
+      <p class="disclaimer">AI가 찾아낸 구절은 번역본마다 표현이 다르거나 틀릴 수 있어요. ‘의역’ 표시가 있는 문장은 원문 확인을 권장해요.</p>
+    </section>
+
+    <!-- STEP 3 -->
+    <section id="step-make" class="panel" hidden>
+      <h2 class="step"><span class="num n3">3</span>그래피티 카드 만들기</h2>
+      <div class="maker">
+        <div class="preview-wrap">
+          <div id="preview" class="preview"><canvas id="card"></canvas></div>
+          <p id="card-quote" class="card-quote"></p>
+        </div>
+
+        <div class="controls">
+          <div class="field">
+            <label for="card-text">카드 문구 <small>(줄바꿈 = 줄 나눔)</small></label>
+            <textarea id="card-text" rows="3" maxlength="80"></textarea>
+          </div>
+          <div class="field">
+            <label>스타일</label>
+            <div id="templates" class="tpl-grid"></div>
+          </div>
+          <div class="field two">
+            <div>
+              <label for="font">글꼴</label>
+              <select id="font"></select>
+            </div>
+            <div>
+              <label for="size">크기</label>
+              <select id="size"></select>
+            </div>
+          </div>
+          <div class="field">
+            <label>색 조합</label>
+            <div class="palette-row">
+              <input type="color" id="c0" aria-label="색 1" />
+              <input type="color" id="c1" aria-label="색 2" />
+              <input type="color" id="c2" aria-label="색 3" />
+              <div id="palette-presets" class="palette-presets"></div>
+            </div>
+          </div>
+          <div class="field toggles">
+            <label class="check"><input type="checkbox" id="show-source" checked /> 출처 표시</label>
+            <label class="check"><input type="checkbox" id="transparent" /> 투명 배경 <small>(이모티콘 스타일)</small></label>
+          </div>
+          <button id="btn-reroll" class="btn btn-ghost" type="button">🎲 다시 뿌리기</button>
+
+          <div class="actions">
+            <button id="btn-download" class="btn btn-primary" type="button">⬇ PNG 저장</button>
+            <button id="btn-share" class="btn btn-lime" type="button">↗ 공유하기</button>
+            <button id="btn-copy-img" class="btn btn-ghost" type="button">이미지 복사</button>
+            <button id="btn-copy-link" class="btn btn-ghost" type="button">🔗 링크 복사</button>
+            <button id="btn-save" class="btn btn-ghost" type="button">★ 갤러리 저장</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GALLERY -->
+    <section id="gallery-sec" class="panel">
+      <h2 class="step"><span class="num n4">★</span>내 갤러리</h2>
+      <p id="gallery-empty" class="hint">저장한 카드가 여기에 쌓여요. (이 브라우저에만 저장됩니다)</p>
+      <div id="gallery" class="gallery"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>문장은 책에서, 해석은 나에게서, 표현은 AI가. · API 키는 내 브라우저에만 저장되고 각 AI 회사로만 직접 전송됩니다.</p>
+  </footer>
+
+  <!-- SETTINGS -->
+  <dialog id="settings" class="dialog">
+    <form method="dialog" class="dialog-body" id="settings-form">
+      <div class="dialog-head">
+        <h2>AI 연결 설정</h2>
+        <button class="icon-btn" value="cancel" aria-label="닫기">✕</button>
+      </div>
+
+      <div class="field">
+        <label for="provider">AI 제공자</label>
+        <select id="provider"></select>
+        <p id="provider-help" class="help"></p>
+      </div>
+
+      <div class="field" id="key-field">
+        <label for="api-key">API 키</label>
+        <div class="input-group">
+          <input id="api-key" type="password" autocomplete="off" spellcheck="false" />
+          <button type="button" id="btn-toggle-key" class="btn btn-ghost btn-sm">보기</button>
+        </div>
+        <label class="check"><input type="checkbox" id="remember-key" /> 이 브라우저에 키 기억하기 <small>(끄면 탭을 닫을 때 삭제)</small></label>
+      </div>
+
+      <details class="field" id="base-field">
+        <summary>Base URL (고급)</summary>
+        <input id="base-url" type="url" spellcheck="false" />
+      </details>
+
+      <div class="field">
+        <label for="model">모델</label>
+        <div class="input-group">
+          <select id="model"><option value="">— 모델 목록을 불러오세요 —</option></select>
+          <button type="button" id="btn-load-models" class="btn btn-ghost btn-sm">↻ 불러오기</button>
+        </div>
+        <input id="model-filter" type="search" placeholder="모델 검색…" />
+        <input id="model-manual" type="text" placeholder="목록에 없으면 모델 ID 직접 입력" spellcheck="false" />
+        <p id="model-msg" class="help"></p>
+      </div>
+
+      <div class="dialog-foot">
+        <button type="button" id="btn-test" class="btn btn-ghost">연결 테스트</button>
+        <button type="button" id="btn-clear-keys" class="btn btn-ghost danger">키 모두 삭제</button>
+        <button type="button" id="btn-save-settings" class="btn btn-primary">저장</button>
+      </div>
+      <p class="help warn">⚠ GitHub Pages 같은 정적 사이트라서 키는 서버 없이 브라우저에서 바로 AI로 전송돼요. 공용 PC에서는 ‘기억하기’를 끄세요. 사용량 한도를 걸어둔 키를 권장해요.</p>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
