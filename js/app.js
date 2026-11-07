@@ -1,6 +1,7 @@
 import { PROVIDERS, resolveConfig, isReady, listModels, chat } from './providers.js';
-import { SCOPES, TONES, SPICE, VARIANT_LABEL, suggestQuotes, demoSuggest, demoRemix, remixCardText, moodPalette } from './quotes.js';
+import { SCOPES, TONES, SPICE, VARIANT_LABEL, suggestQuotes, demoSuggest, demoQuote, demoRemix, remixCardText, moodPalette } from './quotes.js';
 import { FONTS, SIZES, TEMPLATES, MOOD_TEMPLATE, renderCard, canvasToBlob } from './renderer.js';
+import { EXAMPLES, randomExampleIndex } from './examples.js';
 import { loadSettings, saveSettings, clearKeys, loadGallery, addToGallery, removeFromGallery } from './storage.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -41,6 +42,7 @@ const state = {
   spec: null,
   variants: [],
   spice: 2,
+  exampleIdx: -1, // 예시 화면을 보여주는 중이면 EXAMPLES 인덱스, 아니면 -1
 };
 
 // ---------- status ----------
@@ -102,32 +104,50 @@ async function findQuotes({ more = false } = {}) {
   };
   state.lastQuery = query;
 
+  setExampleMode(false);
   const cfg = resolveConfig(settings);
   const btns = [$('#btn-find'), $('#btn-more')];
   btns.forEach((b) => (b.disabled = true));
+  const findBtn = $('#btn-find');
+  const findLabel = findBtn.innerHTML;
+  const t0 = performance.now();
+  const tick = () => (findBtn.textContent = `문장 찾는 중… ${Math.floor((performance.now() - t0) / 1000)}초`);
+  tick();
+  const timer = setInterval(tick, 250);
+
   $('#step-pick').hidden = false;
   const grid = $('#suggestions');
-  if (!more) grid.replaceChildren();
-  const skeletons = Array.from({ length: 4 }, () => el('div', { class: 'sg skeleton' }));
+  if (!more) {
+    grid.replaceChildren();
+    state.suggestions = [];
+  }
+  const skeletons = Array.from({ length: query.count }, () => el('div', { class: 'sg skeleton' }));
   grid.append(...skeletons);
   $('#step-pick').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  // 도착하는 대로 스켈레톤 하나를 실제 카드로 교체
+  const show = (q) => {
+    state.suggestions.push(q);
+    const card = suggestionCard(q, state.suggestions.length - 1);
+    const sk = skeletons.shift();
+    sk ? sk.replaceWith(card) : grid.append(card);
+  };
+
   try {
-    let list;
     if (isReady(cfg)) {
-      list = await suggestQuotes(cfg, query);
+      await suggestQuotes(cfg, query, { onItem: show });
     } else {
-      list = demoSuggest(query);
+      const list = demoSuggest(query);
       if (!list.length) throw new Error('데모 문장을 모두 보여드렸어요. 설정에서 AI 를 연결하면 무제한으로 찾을 수 있어요.');
+      list.forEach(show);
       toast('데모 모드예요. ⚙ 설정에서 AI 를 연결하면 내 상황 맞춤 문장을 찾아줘요.');
     }
-    skeletons.forEach((s) => s.remove());
-    state.suggestions = more ? [...state.suggestions, ...list] : list;
-    list.forEach((q, i) => grid.append(suggestionCard(q, i)));
   } catch (e) {
-    skeletons.forEach((s) => s.remove());
     grid.append(el('div', { class: 'error-box' }, `문장을 찾지 못했어요.\n${e.message}`));
   } finally {
+    skeletons.forEach((sk) => sk.remove());
+    clearInterval(timer);
+    findBtn.innerHTML = findLabel;
     btns.forEach((b) => (b.disabled = false));
   }
 }
@@ -150,12 +170,12 @@ function suggestionCard(q, i) {
 }
 
 // ---------- step 3: editor ----------
-function pickQuote(q) {
-  const template = MOOD_TEMPLATE[q.mood] || 'spray';
+function pickQuote(q, { text, template: forcedTemplate, scroll = true } = {}) {
+  const template = forcedTemplate || MOOD_TEMPLATE[q.mood] || 'spray';
   const tpl = TEMPLATES.find((t) => t.id === template);
   state.spec = {
     id: newId(),
-    text: q.card_text,
+    text: text || q.card_text,
     quote: q.quote,
     situation: state.lastQuery?.situation || '',
     source: [q.book && `『${q.book}』`, q.author].filter(Boolean).join(' '),
@@ -167,17 +187,57 @@ function pickQuote(q) {
     showSource: true,
     transparent: false,
   };
-  openEditor({ variants: q.variants || [] });
+  openEditor({ variants: q.variants || [], scroll });
 }
 
-function openEditor({ variants = [] } = {}) {
+function openEditor({ variants = [], scroll = true } = {}) {
   state.variants = variants;
   $('#step-make').hidden = false;
   syncControls();
   renderTemplateThumbs();
   renderPreview();
-  $('#step-make').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (scroll) $('#step-make').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+// ---------- 예시 화면 (첫 방문자가 흐름을 바로 이해하도록) ----------
+function exampleSuggestions(ex) {
+  return ex.picks.map(([book, why]) => demoQuote(book, why)).filter(Boolean);
+}
+
+function exampleText(ex, q) {
+  return q.variants.find((v) => v.style === ex.variant)?.text || q.card_text;
+}
+
+function setExampleMode(on) {
+  if (!on) {
+    state.exampleIdx = -1;
+    state.exampleFresh = false;
+  }
+  document.body.classList.toggle('is-example', on);
+}
+
+function applyExample(idx) {
+  const ex = EXAMPLES[idx];
+  state.exampleIdx = idx;
+  state.exampleFresh = true;
+  setExampleMode(true);
+
+  $('#situation').value = ex.situation;
+  $('#sit-count').textContent = ex.situation.length;
+  $('#custom-book').value = '';
+  state.scopes = new Set(ex.scopes);
+  state.tone = ex.tone;
+  renderChips();
+  state.lastQuery = { situation: ex.situation, scopes: ex.scopes, tone: ex.tone, book: '', count: 4, exclude: [] };
+
+  state.suggestions = exampleSuggestions(ex);
+  $('#step-pick').hidden = false;
+  $('#suggestions').replaceChildren(...state.suggestions.map((q, i) => suggestionCard(q, i)));
+
+  const first = state.suggestions[0];
+  pickQuote(first, { text: exampleText(ex, first), template: ex.template, scroll: false });
+}
+
 
 function syncControls() {
   const s = state.spec;
@@ -455,6 +515,10 @@ async function renderGallery() {
   $('#gallery-empty').hidden = list.length > 0;
   const g = $('#gallery');
   g.replaceChildren();
+  if (!list.length) {
+    renderExampleGallery(g);
+    return;
+  }
   for (const spec of list) {
     const canvas = el('canvas');
     const item = el('div', {
@@ -476,6 +540,31 @@ async function renderGallery() {
     g.append(item);
     renderCard(canvas, spec, { maxDim: 300 });
   }
+}
+
+// 갤러리가 비어 있으면 예시 상황들로 만든 샘플 카드를 보여준다 (저장되지 않음)
+function renderExampleGallery(g) {
+  EXAMPLES.slice(0, 8).forEach((ex, i) => {
+    const q = demoQuote(ex.picks[0][0]);
+    if (!q) return;
+    const tpl = TEMPLATES.find((t) => t.id === ex.template);
+    const spec = {
+      id: `example-${i}`, text: exampleText(ex, q), quote: q.quote, situation: ex.situation,
+      source: `『${q.book}』 ${q.author}`, template: ex.template, font: tpl.font, size: 'square',
+      palette: [...q.palette], seed: 1000 + i, showSource: true, transparent: false,
+    };
+    const canvas = el('canvas');
+    g.append(
+      el('div', {
+        class: 'g-item example', tabindex: '0', title: ex.situation,
+        onclick: () => {
+          state.spec = { ...spec, id: newId(), palette: [...spec.palette] };
+          openEditor({ variants: q.variants });
+        },
+      }, canvas, el('span', { class: 'g-tag' }, '예시'))
+    );
+    renderCard(canvas, spec, { maxDim: 300 });
+  });
 }
 
 // ---------- settings dialog ----------
@@ -632,6 +721,14 @@ function init() {
   $('#btn-settings').addEventListener('click', openSettings);
   $('#status-pill').addEventListener('click', openSettings);
 
+  $('#btn-example').addEventListener('click', () => applyExample(randomExampleIndex(state.exampleIdx)));
+  // 예시 문장이 들어 있을 때 입력창을 누르면 전체 선택 → 바로 내 상황으로 덮어쓰기 쉽게
+  $('#situation').addEventListener('focus', (e) => {
+    if (state.exampleFresh) e.target.select();
+  });
+  $('#situation').addEventListener('input', () => (state.exampleFresh = false));
+
+  applyExample(randomExampleIndex());
   loadFromHash();
   window.addEventListener('hashchange', loadFromHash);
 }

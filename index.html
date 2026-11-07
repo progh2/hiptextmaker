@@ -33,7 +33,11 @@
       <p class="hint">무슨 일이 있었는지, 어떤 기분인지 편하게 적어주세요. 어울리는 책 속 문장을 찾아드려요.</p>
       <textarea id="situation" rows="4" maxlength="600"
         placeholder="예) 열심히 준비한 시험을 망쳤어. 다음 주에 또 시험인데 아무것도 하기 싫다…"></textarea>
-      <div class="counter"><span id="sit-count">0</span>/600</div>
+      <div class="sit-meta">
+        <button id="btn-example" class="btn btn-ghost btn-sm" type="button">🎲 다른 예시 보기</button>
+        <span class="example-only example-chip">예시 상황 · 눌러서 내 얘기로 바꿔 쓰기</span>
+        <span class="counter"><span id="sit-count">0</span>/600</span>
+      </div>
 
       <div class="field">
         <label>어떤 책에서 찾을까? <small>(여러 개 선택 가능)</small></label>
@@ -52,6 +56,7 @@
     <!-- STEP 2 -->
     <section id="step-pick" class="panel" hidden>
       <h2 class="step"><span class="num n2">2</span>마음에 꽂히는 문장 고르기</h2>
+      <p class="example-only example-banner">👀 위 예시 상황으로 미리 찾아둔 결과예요. 내 상황을 적고 <b>문장 찾기</b>를 누르면 AI가 새로 찾아줘요.</p>
       <div id="suggestions" class="suggest-grid"></div>
       <div class="row-center">
         <button id="btn-more" class="btn btn-ghost" type="button">↻ 다른 문장 더 찾기</button>
@@ -62,6 +67,7 @@
     <!-- STEP 3 -->
     <section id="step-make" class="panel" hidden>
       <h2 class="step"><span class="num n3">3</span>그래피티 카드 만들기</h2>
+      <p class="example-only example-banner">👀 예시 카드예요. 문구 버전·스타일·색을 바꿔보며 어떻게 동작하는지 구경해보세요.</p>
       <div class="maker">
         <div class="preview-wrap">
           <div id="preview" class="preview"><canvas id="card"></canvas></div>
@@ -121,7 +127,7 @@
     <!-- GALLERY -->
     <section id="gallery-sec" class="panel">
       <h2 class="step"><span class="num n4">★</span>내 갤러리</h2>
-      <p id="gallery-empty" class="hint">저장한 카드가 여기에 쌓여요. (이 브라우저에만 저장됩니다)</p>
+      <p id="gallery-empty" class="hint">아래는 예시 카드예요. ★ 갤러리 저장을 누르면 내가 만든 카드가 여기에 쌓여요. (이 브라우저에만 저장)</p>
       <div id="gallery" class="gallery"></div>
     </section>
   </main>

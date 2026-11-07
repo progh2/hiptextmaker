@@ -157,53 +157,66 @@ export async function listModels(cfg) {
   }
 }
 
-/** system + user 프롬프트로 텍스트 응답 하나를 받는다 */
-export async function chat(cfg, system, user, { json = true } = {}) {
+// 400(지원하지 않는 파라미터)이면 다음 후보 body 로 재시도 — 속도용 옵션을 안전하게 붙이기 위함
+async function postWithFallback(url, headers, bodies) {
+  let lastErr;
+  for (const body of bodies) {
+    try {
+      return await request(url, { method: 'POST', headers, body: JSON.stringify(body) });
+    } catch (e) {
+      lastErr = e;
+      if (e.status !== 400) throw e;
+    }
+  }
+  throw lastErr;
+}
+
+const OPENAI_REASONING = /^(o\d|gpt-5)/i;
+
+/**
+ * system + user 프롬프트로 텍스트 응답 하나를 받는다.
+ * fast: 추론(thinking) 모델의 생각 시간을 최소화해서 응답을 빠르게 받는다.
+ */
+export async function chat(cfg, system, user, { json = true, fast = true } = {}) {
   if (!isReady(cfg)) throw new Error('설정에서 AI 모델을 먼저 연결해주세요.');
 
   switch (cfg.kind) {
     case 'anthropic': {
-      const data = await request(`${cfg.baseUrl}/messages`, {
-        method: 'POST',
-        headers: anthropicHeaders(cfg),
-        body: JSON.stringify({
-          model: cfg.model,
-          max_tokens: 4096,
-          system,
-          messages: [{ role: 'user', content: user }],
-        }),
-      });
+      const data = await postWithFallback(`${cfg.baseUrl}/messages`, anthropicHeaders(cfg), [
+        { model: cfg.model, max_tokens: 4096, system, messages: [{ role: 'user', content: user }] },
+      ]);
       return (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
     }
     case 'gemini': {
-      const body = {
+      const base = {
         systemInstruction: { parts: [{ text: system }] },
         contents: [{ role: 'user', parts: [{ text: user }] }],
+        generationConfig: json ? { responseMimeType: 'application/json' } : {},
       };
-      if (json) body.generationConfig = { responseMimeType: 'application/json' };
+      const bodies = [];
+      if (fast) {
+        // flash 계열은 생각 끄기(0), pro 계열은 끌 수 없어서 최소값
+        const budget = /pro/i.test(cfg.model) ? 128 : 0;
+        bodies.push({ ...base, generationConfig: { ...base.generationConfig, thinkingConfig: { thinkingBudget: budget } } });
+      }
+      bodies.push(base);
       const url = `${cfg.baseUrl}/models/${encodeURIComponent(cfg.model)}:generateContent?key=${encodeURIComponent(cfg.apiKey)}`;
-      const data = await request(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const data = await postWithFallback(url, { 'Content-Type': 'application/json' }, bodies);
       const parts = data.candidates?.[0]?.content?.parts || [];
       return parts.filter((p) => !p.thought).map((p) => p.text || '').join('');
     }
     case 'ollama': {
-      const data = await request(`${cfg.baseUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: cfg.model,
-          stream: false,
-          ...(json ? { format: 'json' } : {}),
-          messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: user },
-          ],
-        }),
-      });
+      const base = {
+        model: cfg.model,
+        stream: false,
+        ...(json ? { format: 'json' } : {}),
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+      };
+      const bodies = fast ? [{ ...base, think: false }, base] : [base];
+      const data = await postWithFallback(`${cfg.baseUrl}/api/chat`, { 'Content-Type': 'application/json' }, bodies);
       return data.message?.content || '';
     }
     default: {
@@ -214,20 +227,15 @@ export async function chat(cfg, system, user, { json = true } = {}) {
           { role: 'user', content: user },
         ],
       };
-      const call = (body) =>
-        request(`${cfg.baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: openaiHeaders(cfg),
-          body: JSON.stringify(body),
-        });
-      let data;
-      try {
-        data = await call(json ? { ...base, response_format: { type: 'json_object' } } : base);
-      } catch (e) {
-        // JSON 모드를 지원하지 않는 모델/엔드포인트면 일반 모드로 재시도
-        if (json && e.status === 400) data = await call(base);
-        else throw e;
+      const jsonMode = json ? { response_format: { type: 'json_object' } } : {};
+      const bodies = [];
+      if (fast && OPENAI_REASONING.test(cfg.model.replace(/^openai\//, ''))) {
+        bodies.push({ ...base, ...jsonMode, reasoning_effort: 'minimal' });
+        bodies.push({ ...base, ...jsonMode, reasoning_effort: 'low' });
       }
+      bodies.push({ ...base, ...jsonMode });
+      if (json) bodies.push(base); // JSON 모드를 지원하지 않는 엔드포인트
+      const data = await postWithFallback(`${cfg.baseUrl}/chat/completions`, openaiHeaders(cfg), bodies);
       return data.choices?.[0]?.message?.content || '';
     }
   }

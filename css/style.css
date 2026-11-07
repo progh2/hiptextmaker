@@ -84,7 +84,17 @@ textarea { resize: vertical; line-height: 1.6; }
 textarea:focus, input:focus, select:focus { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(255, 43, 214, .2); }
 #situation { font-size: 16px; }
 #custom-book { margin-top: 10px; }
-.counter { text-align: right; color: var(--muted); font-size: 12px; margin-top: 4px; }
+.counter { color: var(--muted); font-size: 12px; margin-left: auto; }
+.sit-meta { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.example-only { display: none; }
+body.is-example .example-only { display: revert; }
+.example-chip { font-size: 12px; background: var(--yellow); color: #111; padding: 3px 10px; border-radius: 999px; font-weight: 700; border: 1.5px solid #000; }
+.example-banner {
+  margin: -4px 0 14px; padding: 10px 14px; border-radius: 10px; font-size: 14px;
+  background: repeating-linear-gradient(-45deg, rgba(255,230,0,.13) 0 12px, rgba(255,230,0,.06) 12px 24px);
+  border: 1.5px dashed var(--yellow); color: #ffeaa0;
+}
+.g-tag { position: absolute; left: 6px; top: 6px; background: var(--yellow); color: #111; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1.5px solid #000; }
 .input-group { display: flex; gap: 8px; }
 .input-group > :first-child { flex: 1; min-width: 0; }
 #model-filter, #model-manual { margin-top: 8px; }

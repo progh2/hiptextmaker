@@ -26,6 +26,12 @@
 | OpenAI 호환 | 선택 | `GET {baseUrl}/models` (LM Studio, vLLM, Groq 등) |
 
 키를 넣지 않아도 **데모 모드**(내장된 명문장 13개)로 흐름을 체험할 수 있습니다.
+처음 접속하면 예시 상황 10개(`js/examples.js`) 중 하나가 랜덤으로 채워지고, 그 예시로 만든 추천 구절·카드·갤러리가 미리 보입니다.
+
+### 응답 속도
+- 구절 4개를 한 번에 생성하지 않고 **1개씩 병렬 요청** → 먼저 도착한 카드부터 바로 표시 (Ollama 는 로컬 동시 처리가 느려서 한 번에 요청)
+- 추론 모델은 생각 시간을 최소화: OpenAI `reasoning_effort: minimal→low`, Gemini `thinkingBudget: 0`(pro 는 128), Ollama `think: false`. 지원하지 않는 모델이면 자동으로 옵션을 빼고 재시도
+- 그래도 느리면 `gpt-4o-mini`, `gemini-2.5-flash`, `claude-haiku` 같은 경량 모델을 추천
 
 ### Ollama 를 GitHub Pages 에서 쓰려면
 
@@ -66,7 +72,8 @@ index.html          화면 (입력 → 제안 → 카드 → 갤러리, 설정 �
 css/style.css       그런지·네온 UI
 js/app.js           화면 로직, 공유/링크/갤러리, 설정 다이얼로그
 js/providers.js     AI 제공자 어댑터 (모델 목록 조회 + 채팅 호출)
-js/quotes.js        구절 추천 프롬프트·응답 정규화·데모 데이터
+js/quotes.js        구절 추천 프롬프트(병렬)·카드 문구 리믹스·데모 데이터
+js/examples.js      첫 화면 예시 상황 10개
 js/renderer.js      Canvas 그래피티 렌더러 (시드 기반 → 같은 링크는 같은 그림)
 js/storage.js       설정·갤러리 저장
 ```

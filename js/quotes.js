@@ -61,30 +61,79 @@ ${CARD_COPY_GUIDE}
 반드시 아래 형식의 JSON 만 출력한다. 다른 말은 쓰지 않는다.
 {"quotes":[{"quote":"","card_text":"","variants":{"cut":"","street":"","meme":""},"book":"","author":"","scene":"","why":"","mood":"","palette":["#","#","#"],"confidence":"high","paraphrase":false}]}`;
 
-export async function suggestQuotes(cfg, { situation, scopes, tone, book, count = 4, exclude = [] }) {
-  const scopeText = scopes.length
-    ? scopes
+// 병렬 요청마다 다른 "각도"를 줘서 같은 구절이 겹치지 않게 한다
+const ANGLES = [
+  '이 상황에 가장 정석적으로 떠오르는 대표 구절',
+  '의외지만 읽고 나면 무릎을 치는 반전 구절',
+  '짧고 강렬해서 그대로 벽에 써도 되는 한 줄',
+  '감정을 건드리는 서정적인 구절',
+  '철학적으로 한 발 물러서서 보게 하는 구절',
+  '유머와 위트가 있는 구절',
+];
+
+function scopeLines(ids) {
+  return ids.length
+    ? ids
         .map((id) => SCOPES.find((s) => s.id === id))
         .filter(Boolean)
         .map((s) => `- ${s.label} (예: ${s.hint})`)
         .join('\n')
     : '- 장르 제한 없음 (고전 위주)';
+}
 
+async function requestQuotes(cfg, { situation, scopes, tone, book, count, exclude, angle }) {
   const user = [
     `[내 상황]\n${situation}`,
-    `[찾을 범위]\n${scopeText}`,
+    `[찾을 범위]\n${scopeLines(scopes)}`,
     book ? `[꼭 이 책/작가 안에서 찾기]\n${book}` : '',
     tone ? `[원하는 분위기] ${tone}` : '',
+    angle ? `[이번에 찾을 구절의 결] ${angle}` : '',
     exclude.length ? `[이미 제안한 구절 — 겹치지 않게]\n${exclude.map((q) => `- ${q}`).join('\n')}` : '',
-    `구절 ${count}개를 제안해줘.`,
+    `구절 ${count}개를 제안해줘. why 는 한 문장으로 짧게.`,
   ]
     .filter(Boolean)
     .join('\n\n');
+  const data = extractJSON(await chat(cfg, SYSTEM, user, { json: true }));
+  const list = Array.isArray(data) ? data : data.quotes || data.items || [data];
+  return list.map(normalize).filter(Boolean);
+}
 
-  const raw = await chat(cfg, SYSTEM, user, { json: true });
-  const data = extractJSON(raw);
-  const list = Array.isArray(data) ? data : data.quotes || data.items || [];
-  const out = list.map(normalize).filter(Boolean);
+/**
+ * 구절 추천. 클라우드 모델은 1개씩 병렬로 요청해서 먼저 도착한 것부터 onItem 으로 바로 보여준다
+ * (4개를 한 번에 생성하는 것보다 첫 카드가 훨씬 빨리 뜬다). 로컬 Ollama 는 동시 처리가 느려서 한 번에 요청.
+ */
+export async function suggestQuotes(cfg, { situation, scopes, tone, book, count = 4, exclude = [] }, { onItem } = {}) {
+  const seen = new Set(exclude);
+  const out = [];
+  const accept = (items) => {
+    for (const q of items) {
+      const key = `${q.book}|${q.quote}`;
+      if (seen.has(q.quote) || seen.has(key)) continue;
+      seen.add(q.quote);
+      seen.add(key);
+      out.push(q);
+      onItem?.(q);
+    }
+  };
+
+  if (cfg.kind === 'ollama') {
+    accept(await requestQuotes(cfg, { situation, scopes, tone, book, count, exclude }));
+  } else {
+    const offset = Math.floor(Math.random() * ANGLES.length);
+    const jobs = Array.from({ length: count }, (_, i) => {
+      // 범위를 여러 개 골랐으면 요청마다 하나씩 나눠 맡겨서 다양성 확보
+      const myScopes = scopes.length > 1 ? [scopes[i % scopes.length]] : scopes;
+      return requestQuotes(cfg, {
+        situation, scopes: myScopes, tone, book, count: 1, exclude,
+        angle: ANGLES[(offset + i) % ANGLES.length],
+      }).then((items) => accept(items.slice(0, 1)));
+    });
+    const results = await Promise.allSettled(jobs);
+    if (!out.length) {
+      const err = results.find((r) => r.status === 'rejected');
+      if (err) throw err.reason;
+    }
+  }
   if (!out.length) throw new Error('추천 구절을 받지 못했어요. 상황을 조금 더 구체적으로 적거나 다른 모델을 써보세요.');
   return out;
 }
@@ -289,6 +338,25 @@ const DEMO_PALETTES = {
 
 export function moodPalette(mood) {
   return [...(DEMO_PALETTES[mood] || DEMO_PALETTES.fire)];
+}
+
+/** 데모 구절을 책 제목으로 꺼내서 추천 카드 형태로 만든다 (예시 화면용) */
+export function demoQuote(book, why) {
+  const d = DEMO.find((x) => x.book === book);
+  if (!d) return null;
+  return {
+    quote: d.quote,
+    card_text: DEMO_VARIANTS[d.book]?.street || d.card_text,
+    variants: normalizeVariants(DEMO_VARIANTS[d.book] || { cut: d.card_text }),
+    book: d.book,
+    author: d.author,
+    scene: d.scene,
+    why: why || '',
+    mood: d.mood,
+    palette: moodPalette(d.mood),
+    confidence: 'high',
+    paraphrase: false,
+  };
 }
 
 export function demoRemix(quote) {
