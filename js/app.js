@@ -1,5 +1,5 @@
 import { PROVIDERS, resolveConfig, isReady, listModels, chat } from './providers.js';
-import { SCOPES, TONES, suggestQuotes, demoSuggest, moodPalette } from './quotes.js';
+import { SCOPES, TONES, SPICE, VARIANT_LABEL, suggestQuotes, demoSuggest, demoRemix, remixCardText, moodPalette } from './quotes.js';
 import { FONTS, SIZES, TEMPLATES, MOOD_TEMPLATE, renderCard, canvasToBlob } from './renderer.js';
 import { loadSettings, saveSettings, clearKeys, loadGallery, addToGallery, removeFromGallery } from './storage.js';
 
@@ -39,6 +39,8 @@ const state = {
   suggestions: [],
   lastQuery: null,
   spec: null,
+  variants: [],
+  spice: 2,
 };
 
 // ---------- status ----------
@@ -155,6 +157,7 @@ function pickQuote(q) {
     id: newId(),
     text: q.card_text,
     quote: q.quote,
+    situation: state.lastQuery?.situation || '',
     source: [q.book && `『${q.book}』`, q.author].filter(Boolean).join(' '),
     template,
     font: tpl.font,
@@ -164,10 +167,11 @@ function pickQuote(q) {
     showSource: true,
     transparent: false,
   };
-  openEditor();
+  openEditor({ variants: q.variants || [] });
 }
 
-function openEditor() {
+function openEditor({ variants = [] } = {}) {
+  state.variants = variants;
   $('#step-make').hidden = false;
   syncControls();
   renderTemplateThumbs();
@@ -178,6 +182,7 @@ function openEditor() {
 function syncControls() {
   const s = state.spec;
   $('#card-text').value = s.text;
+  renderVariants();
   $('#font').value = s.font;
   $('#size').value = s.size;
   ['#c0', '#c1', '#c2'].forEach((id, i) => ($(id).value = s.palette[i]));
@@ -187,6 +192,59 @@ function syncControls() {
   $('#transparent').closest('label').style.opacity = s.template === 'emoji' ? 1 : 0.45;
   $('#card-quote').textContent = s.quote ? `“${s.quote}” ${s.source ? '— ' + s.source : ''}` : '';
   document.querySelectorAll('.tpl').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === s.template)));
+}
+
+// ---------- 카드 문구 버전 / 리믹스 ----------
+function renderVariants() {
+  $('#variants').replaceChildren(
+    ...state.variants.map((v) =>
+      el('button', {
+        type: 'button', class: 'variant', 'aria-pressed': String(v.text === state.spec.text),
+        onclick: () => update({ text: v.text }, { thumbs: true }),
+      }, el('small', {}, VARIANT_LABEL[v.style] || '리믹스'), v.text)
+    )
+  );
+}
+
+function buildRemixControls() {
+  const spice = $('#spice');
+  const paint = () => spice.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(+b.dataset.id === state.spice)));
+  spice.replaceChildren(
+    ...SPICE.map((x) =>
+      el('button', { type: 'button', role: 'radio', 'data-id': x.id, title: x.guide, onclick: () => { state.spice = x.id; paint(); } }, x.label)
+    )
+  );
+  paint();
+
+  $('#btn-remix').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const cfg = resolveConfig(settings);
+    const s = state.spec;
+    if (!isReady(cfg)) {
+      const demo = demoRemix(s.quote).filter((v) => !state.variants.some((x) => x.text === v.text));
+      if (demo.length) state.variants = [...state.variants, ...demo];
+      renderVariants();
+      toast('데모 모드예요. ⚙ 설정에서 AI 를 연결하면 매번 새로운 리믹스를 뽑아줘요.');
+      return;
+    }
+    btn.disabled = true;
+    const loading = el('span', { class: 'variant loading' }, '🔥 리믹스 중…');
+    $('#variants').append(loading);
+    try {
+      const list = await remixCardText(cfg, {
+        quote: s.quote, source: s.source, situation: s.situation || state.lastQuery?.situation, current: s.text, spice: state.spice,
+      });
+      const fresh = list.filter((v) => !state.variants.some((x) => x.text === v.text));
+      state.variants = [...fresh, ...state.variants].slice(0, 12);
+      if (fresh[0]) update({ text: fresh[0].text }, { thumbs: true });
+      else renderVariants();
+    } catch (err) {
+      loading.remove();
+      toast(`리믹스 실패: ${err.message}`, true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 }
 
 let renderToken = 0;
@@ -257,6 +315,7 @@ function buildEditorControls() {
     )
   );
   buildTemplateButtons();
+  buildRemixControls();
 
   $('#card-text').addEventListener('input', (e) => update({ text: e.target.value }));
   $('#card-text').addEventListener('change', () => renderTemplateThumbs());

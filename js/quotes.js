@@ -15,20 +15,51 @@ export const TONES = ['위로', '응원', '결의', '쿨함', '유머', '설렘'
 
 export const MOODS = ['fire', 'calm', 'sad', 'joy', 'love', 'resolve', 'chill', 'rebel'];
 
+// 카드 문구 작법 — "요약"이 아니라 "펀치라인"이 나오도록 좋은/나쁜 예를 같이 준다
+const CARD_COPY_GUIDE = `[카드 문구 작법 — 제일 중요]
+카드 문구는 구절의 요약·교훈이 아니다. 벽에 스프레이로 갈겨쓴 한 방, 친구가 툭 던지는 펀치라인이다.
+- 금지: 요약/설명/교훈/훈계. "~하자", "~해야 해", "~의 중요성", "포기하지 마세요", "힘내세요" 같은 공익광고 말투.
+- 원문의 가장 센 단어(훅 단어) 하나는 살려서 출처가 느껴지게 한다.
+- 사용자 상황의 구체적인 단어(시험, 단톡방, 월요일, 고백, 퇴사 등)를 비틀어 넣으면 더 좋다.
+- 리듬: 끊어 치기, 대구, 반복, 라임, 반전. 마지막 줄이 펀치.
+- 말투: 반말, 단언, 자신감. 스트릿 슬랭·인터넷 밈 톤·영어 한 단어 섞기 OK. 욕설·혐오 표현은 금지.
+- 길이: 줄당 2~8자, 2~3줄, 전체 4~18자. 줄바꿈은 \\n.
+- 이모지·따옴표·마침표 금지 (물음표·쉼표·느낌표는 OK).
+
+예시)
+원문: 인간은 파멸당할 수는 있어도 패배하지는 않아. (노인과 바다) / 상황: 시험 망함
+  ✗ 요약: "포기하지 말고\n끝까지 버티자"
+  ✓ 원문컷: "파멸은 OK\n패배는 NO"
+  ✓ 스트릿: "깨질 순 있어도\n꺾이진 않아"
+  ✓ 밈: "멘탈 박살?\nㄴㄴ 아직\n경기 중"
+원문: 새는 알에서 나오려고 투쟁한다. 알은 세계이다. (데미안) / 상황: 진로 고민
+  ✗ 요약: "변화를\n두려워하지 마"
+  ✓ 원문컷: "알은 세계다\n깨라"
+  ✓ 스트릿: "내 세계는\n내가 깬다"
+  ✓ 밈: "알 속 생활\n이제 퇴사함"
+원문: 내일은 아직 아무 실수도 하지 않은 새로운 날이에요. (빨강 머리 앤) / 상황: 발표 망침
+  ✗ 요약: "내일은\n새로운 날이야"
+  ✓ 원문컷: "실수 0개\n내일 입고"
+  ✓ 스트릿: "오늘은 망함\n내일은 새거"
+  ✓ 밈: "오늘 버전\n삭제하고\n내일 업데이트"`;
+
 const SYSTEM = `너는 문학 큐레이터이자 스트리트 카피라이터다.
-사용자가 자기 상황을 말하면, 지정된 범위의 "실제로 존재하는 책"에서 그 상황에 어울리는 유명하고 그럴싸한 구절을 골라 제안한다.
+사용자가 자기 상황을 말하면, 지정된 범위의 "실제로 존재하는 책"에서 그 상황에 어울리는 유명하고 그럴싸한 구절을 골라 제안하고,
+그 구절을 그래피티 카드에 쓸 힙한 문구로 리믹스한다.
 
 규칙:
 1. 실존하는 책, 널리 알려진 구절만 고른다. 책·작가·구절을 지어내지 마라.
 2. quote 는 한국어 번역서에서 통용되는 표현으로 원문 그대로 적는다. 정확한 문장이 기억나지 않으면 의미를 살려 적고 "paraphrase": true, "confidence": "medium" 으로 표시한다.
-3. card_text 는 그래피티 카드에 크게 쓸 짧고 힙한 문구다. 원문의 핵심을 살려 6~24자, 1~3줄, 줄바꿈은 \\n 으로 표시. 원문 그대로가 짧고 강렬하면 그대로 써도 좋다. 이모지·따옴표 금지.
-4. scene 은 그 구절이 나오는 책 속 장면을 한 줄로, why 는 사용자 상황과 이 구절이 왜 통하는지 1~2문장으로 쓴다.
+3. variants 는 카드 문구 3개: cut(원문에서 제일 센 부분을 잘라 리듬만 살린 것), street(반말 펀치라인 리믹스), meme(인터넷 밈·드립 톤). card_text 는 셋 중 제일 힙한 것.
+4. scene 은 그 구절이 나오는 책 속 장면을 한 줄로, why 는 사용자 상황과 이 구절이 왜 통하는지 1~2문장으로 쓴다 (설명은 여기서만).
 5. mood 는 fire, calm, sad, joy, love, resolve, chill, rebel 중 하나.
 6. palette 는 이 구절의 감정을 표현하는 그래피티용 형광/비비드 색 3개(#RRGGBB).
 7. 서로 다른 책에서 고르는 것을 우선한다.
 
+${CARD_COPY_GUIDE}
+
 반드시 아래 형식의 JSON 만 출력한다. 다른 말은 쓰지 않는다.
-{"quotes":[{"quote":"","card_text":"","book":"","author":"","scene":"","why":"","mood":"","palette":["#","#","#"],"confidence":"high","paraphrase":false}]}`;
+{"quotes":[{"quote":"","card_text":"","variants":{"cut":"","street":"","meme":""},"book":"","author":"","scene":"","why":"","mood":"","palette":["#","#","#"],"confidence":"high","paraphrase":false}]}`;
 
 export async function suggestQuotes(cfg, { situation, scopes, tone, book, count = 4, exclude = [] }) {
   const scopeText = scopes.length
@@ -60,17 +91,39 @@ export async function suggestQuotes(cfg, { situation, scopes, tone, book, count 
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
+export const VARIANT_LABEL = { pick: '추천', cut: '원문컷', street: '스트릿', meme: '밈', remix: '리믹스' };
+
+function cleanCard(t) {
+  return String(t || '')
+    .replace(/\\n/g, '\n')
+    .replace(/^["'“‘「『]+|["'”’」』]+$/g, '')
+    .replace(/[.。]+$/gm, '')
+    .trim();
+}
+
+function normalizeVariants(v) {
+  const entries = Array.isArray(v)
+    ? v.map((x) => (typeof x === 'string' ? ['remix', x] : [x?.style || 'remix', x?.text]))
+    : Object.entries(v || {});
+  const seen = new Set();
+  return entries
+    .map(([style, text]) => ({ style: VARIANT_LABEL[style] ? style : 'remix', text: cleanCard(text) }))
+    .filter((x) => x.text && !seen.has(x.text) && seen.add(x.text));
+}
+
 function normalize(q) {
   if (!q || typeof q !== 'object') return null;
   const quote = String(q.quote || q.text || '').trim();
-  let card = String(q.card_text || q.cardText || '').replace(/\\n/g, '\n').trim();
+  let card = cleanCard(q.card_text || q.cardText);
   if (!quote && !card) return null;
-  if (!card) card = quote;
-  card = card.replace(/^["'“‘「『]+|["'”’」』]+$/g, '');
+  if (!card) card = cleanCard(q.variants?.street || q.variants?.cut || quote);
   const palette = Array.isArray(q.palette) ? q.palette.filter((c) => HEX.test(String(c).trim())) : [];
+  const variants = normalizeVariants(q.variants);
+  if (!variants.some((v) => v.text === card)) variants.unshift({ style: 'pick', text: card });
   return {
     quote: quote || card,
     card_text: card,
+    variants,
     book: String(q.book || '').replace(/[『』《》]/g, '').trim(),
     author: String(q.author || '').trim(),
     scene: String(q.scene || '').trim(),
@@ -80,6 +133,36 @@ function normalize(q) {
     confidence: q.confidence === 'high' ? 'high' : 'medium',
     paraphrase: Boolean(q.paraphrase),
   };
+}
+
+// ---------- 카드 문구 리믹스 (에디터의 '더 힙하게' 버튼) ----------
+export const SPICE = [
+  { id: 1, label: '순한맛', guide: '담백하고 세련되게. 슬랭은 최소, 리듬과 반전으로 승부.' },
+  { id: 2, label: '보통맛', guide: '반말 펀치라인 위주. 슬랭·영어 한 단어 정도.' },
+  { id: 3, label: '매운맛', guide: '인터넷 밈·드립·과감한 슬랭 풀가동. 단, 욕설·혐오 표현은 금지.' },
+];
+
+const REMIX_SYSTEM = `너는 스트리트 카피라이터다. 책 속 구절을 그래피티 카드용 한 방 문구로 리믹스한다.
+
+${CARD_COPY_GUIDE}
+
+반드시 JSON 만 출력: {"variants":[{"style":"cut|street|meme","text":""}]}`;
+
+export async function remixCardText(cfg, { quote, source, situation, current, spice = 2, count = 6 }) {
+  const level = SPICE.find((x) => x.id === spice) || SPICE[1];
+  const user = [
+    `[원문] ${quote}${source ? ` — ${source}` : ''}`,
+    situation ? `[사용자 상황] ${situation}` : '',
+    current ? `[지금 카드 문구 — 이건 아쉬우니 다른 각도로]\n${current}` : '',
+    `[강도] ${level.label}: ${level.guide}`,
+    `서로 결이 다른 카드 문구 ${count}개. 요약 금지, 전부 펀치라인으로.`,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+  const data = extractJSON(await chat(cfg, REMIX_SYSTEM, user, { json: true }));
+  const out = normalizeVariants(data.variants || data).filter((v) => v.text !== current);
+  if (!out.length) throw new Error('새 문구를 받지 못했어요. 다시 시도해보세요.');
+  return out;
 }
 
 // ---------- 데모 모드 (API 연결 전 체험용) ----------
@@ -177,6 +260,22 @@ const DEMO = [
   },
 ];
 
+const DEMO_VARIANTS = {
+  '데미안': { cut: '알은 세계다\n깨라', street: '내 세계는\n내가 깬다', meme: '알 속 생활\n이제 퇴사함' },
+  '노인과 바다': { cut: '파멸은 OK\n패배는 NO', street: '깨질 순 있어도\n꺾이진 않아', meme: '멘탈 박살?\nㄴㄴ 아직\n경기 중' },
+  '하늘과 바람과 별과 시 (서시)': { cut: '하늘 보고\n한 점도\n안 부끄럽게', street: '떳떳함이\n내 스웩', meme: '양심 풀충전\n하늘 앞 당당' },
+  '어린 왕자': { cut: '진짜는\n안 보여', street: '보이는 건\n다 필터', meme: '눈으로 보면\n하수' },
+  '빨강 머리 앤': { cut: '실수 0개\n내일 입고', street: '오늘은 망함\n내일은 새거', meme: '오늘 버전 삭제\n내일 업데이트' },
+  '햄릿': { cut: '사느냐\n죽느냐\n그게 문제', street: '고민은 햄릿처럼\n결정은 나답게', meme: '살까 말까\n장바구니만\n3시간째' },
+  '논어': { cut: '배우고 익히면\n不亦說乎', street: '익히는 순간\n레벨업', meme: '복습하면\n도파민 터짐' },
+  '풀꽃': { cut: '오래 보아야\n사랑스럽다\n너도', street: '자세히 봐\n나 꽤 괜찮음', meme: '대충 보면\n모름\n찐은 오래 봄' },
+  '연금술사': { cut: '간절하면\n우주가 돕는다', street: '내가 원하면\n우주가 백업', meme: '우주님\n나 지금\n진심임' },
+  '날개': { cut: '날자 날자\n한 번만 더', street: '날개야\n재부팅해라', meme: '현생 탈출\n한 번만 더\n날자' },
+  '바람과 함께 사라지다': { cut: '내일은\n내일의 태양', street: '오늘 진 해는\n내일 또 뜸', meme: '오늘은 로그아웃\n내일 재접속' },
+  '진달래꽃': { cut: '말없이\n고이 보내\n드리우리다', street: '쿨하게 보냄\n근데 꽃은 깔았음', meme: '읽씹 대신\n진달래 깔기' },
+  '방법서설': { cut: '생각한다\n고로 존재한다', street: '생각 중이면\n살아있는 거', meme: '나는 고민한다\n고로 정상이다' },
+};
+
 const DEMO_PALETTES = {
   fire: ['#ff2bd6', '#c6ff00', '#00d1ff'],
   calm: ['#5ee7ff', '#b8ff6b', '#a78bfa'],
@@ -192,6 +291,11 @@ export function moodPalette(mood) {
   return [...(DEMO_PALETTES[mood] || DEMO_PALETTES.fire)];
 }
 
+export function demoRemix(quote) {
+  const d = DEMO.find((x) => x.quote === quote);
+  return normalizeVariants(DEMO_VARIANTS[d?.book] || {});
+}
+
 export function demoSuggest({ situation, scopes, count = 4, exclude = [] }) {
   const text = situation || '';
   const pool = DEMO.filter((d) => !exclude.includes(d.quote));
@@ -205,7 +309,8 @@ export function demoSuggest({ situation, scopes, count = 4, exclude = [] }) {
     .slice(0, count);
   return scored.map(({ d }) => ({
     quote: d.quote,
-    card_text: d.card_text,
+    card_text: DEMO_VARIANTS[d.book]?.street || d.card_text,
+    variants: normalizeVariants(DEMO_VARIANTS[d.book] || { cut: d.card_text }),
     book: d.book,
     author: d.author,
     scene: d.scene,

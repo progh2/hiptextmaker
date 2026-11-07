@@ -152,6 +152,20 @@ textarea:focus, input:focus, select:focus { border-color: var(--pink); box-shado
 .preview canvas { display: block; width: 100%; height: auto; max-height: 72vh; object-fit: contain; }
 .card-quote { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 12px 4px 0; }
 #card-text { font-family: var(--display); font-size: 22px; line-height: 1.25; }
+.variants { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.variant {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; cursor: pointer;
+  background: #141418; border: 2px solid #3a3a42; border-radius: 10px; padding: 6px 10px; max-width: 100%;
+  font-family: var(--display); font-size: 15px; line-height: 1.2; white-space: pre-line;
+}
+.variant small { font-family: var(--body); font-size: 10px; color: var(--muted); letter-spacing: .5px; }
+.variant:hover { border-color: #666; }
+.variant[aria-pressed=true] { border-color: var(--pink); box-shadow: 2px 2px 0 var(--pink); }
+.variant.loading { color: var(--muted); font-family: var(--body); font-size: 13px; cursor: wait; }
+.remix-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 10px; flex-wrap: wrap; }
+.spice { display: inline-flex; border: 2px solid #3a3a42; border-radius: 999px; overflow: hidden; }
+.spice button { background: #141418; border: 0; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+.spice button[aria-checked=true] { background: var(--pink); color: #111; font-weight: 700; }
 .tpl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .tpl {
   border: 2px solid #3a3a42; border-radius: 10px; background: #141418; cursor: pointer; padding: 6px; text-align: center; font-size: 12px;
@@ -195,9 +209,9 @@ details summary { cursor: pointer; font-weight: 700; font-size: 14px; margin-bot
 .toast {
   position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 120px); background: var(--lime); color: #111;
   border: 2px solid #000; box-shadow: 3px 3px 0 #000; padding: 10px 18px; border-radius: 12px; font-weight: 700; z-index: 99;
-  transition: transform .25s; max-width: 90vw;
+  transition: transform .25s, opacity .25s; max-width: 90vw; opacity: 0; pointer-events: none;
 }
-.toast.show { transform: translate(-50%, 0); }
+.toast.show { transform: translate(-50%, 0); opacity: 1; }
 .toast.err { background: #ff8a8a; }
 .foot { text-align: center; color: #6c6c76; font-size: 12px; padding: 10px 20px 40px; }
 
