@@ -173,9 +173,10 @@ body.is-example .example-only { display: revert; }
 .variant[aria-pressed=true] { border-color: var(--pink); box-shadow: 2px 2px 0 var(--pink); }
 .variant.loading { color: var(--muted); font-family: var(--body); font-size: 13px; cursor: wait; }
 .remix-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 10px; flex-wrap: wrap; }
-.spice { display: inline-flex; border: 2px solid #3a3a42; border-radius: 999px; overflow: hidden; }
-.spice button { background: #141418; border: 0; padding: 6px 12px; font-size: 13px; cursor: pointer; }
-.spice button[aria-checked=true] { background: var(--pink); color: #111; font-weight: 700; }
+.genre { display: flex; flex-wrap: wrap; gap: 6px; }
+.genre button { background: #141418; border: 2px solid #3a3a42; border-radius: 999px; padding: 5px 11px; font-size: 13px; cursor: pointer; }
+.genre button:hover { border-color: #666; }
+.genre button[aria-checked=true] { background: var(--pink); border-color: #000; color: #111; font-weight: 700; box-shadow: 2px 2px 0 #000; }
 .tpl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .tpl {
   border: 2px solid #3a3a42; border-radius: 10px; background: #141418; cursor: pointer; padding: 6px; text-align: center; font-size: 12px;

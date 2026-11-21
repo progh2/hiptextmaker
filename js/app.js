@@ -1,5 +1,5 @@
 import { PROVIDERS, resolveConfig, isReady, listModels, chat } from './providers.js';
-import { SCOPES, TONES, SPICE, VARIANT_LABEL, suggestQuotes, demoSuggest, demoQuote, demoRemix, remixCardText, moodPalette } from './quotes.js';
+import { SCOPES, TONES, GENRES, VARIANT_LABEL, suggestQuotes, demoSuggest, demoQuote, demoRemix, remixCardText, moodPalette } from './quotes.js';
 import { FONTS, SIZES, TEMPLATES, MOOD_TEMPLATE, renderCard, canvasToBlob } from './renderer.js';
 import { EXAMPLES, randomExampleIndex } from './examples.js';
 import { loadSettings, saveSettings, clearKeys, loadGallery, addToGallery, removeFromGallery } from './storage.js';
@@ -41,7 +41,7 @@ const state = {
   lastQuery: null,
   spec: null,
   variants: [],
-  spice: 2,
+  genre: 'mix',
   exampleIdx: -1, // 예시 화면을 보여주는 중이면 EXAMPLES 인덱스, 아니면 -1
 };
 
@@ -267,11 +267,11 @@ function renderVariants() {
 }
 
 function buildRemixControls() {
-  const spice = $('#spice');
-  const paint = () => spice.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(+b.dataset.id === state.spice)));
-  spice.replaceChildren(
-    ...SPICE.map((x) =>
-      el('button', { type: 'button', role: 'radio', 'data-id': x.id, title: x.guide, onclick: () => { state.spice = x.id; paint(); } }, x.label)
+  const genre = $('#genre');
+  const paint = () => genre.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.id === state.genre)));
+  genre.replaceChildren(
+    ...GENRES.map((x) =>
+      el('button', { type: 'button', role: 'radio', 'data-id': x.id, title: x.guide, onclick: () => { state.genre = x.id; paint(); } }, x.label)
     )
   );
   paint();
@@ -292,7 +292,7 @@ function buildRemixControls() {
     $('#variants').append(loading);
     try {
       const list = await remixCardText(cfg, {
-        quote: s.quote, source: s.source, situation: s.situation || state.lastQuery?.situation, current: s.text, spice: state.spice,
+        quote: s.quote, source: s.source, situation: s.situation || state.lastQuery?.situation, current: s.text, genre: state.genre,
       });
       const fresh = list.filter((v) => !state.variants.some((x) => x.text === v.text));
       state.variants = [...fresh, ...state.variants].slice(0, 12);
